@@ -132,7 +132,35 @@ def _infer_foreign_keys(
                                 "match_ratio": round(match_ratio, 4),
                             }
                         )
-    return relationships
+    return _deduplicate_circular_relationships(relationships)
+
+
+def _deduplicate_circular_relationships(
+    relationships: List[Dict[str, str]],
+) -> List[Dict[str, str]]:
+    """Remove circular FK pairs (A->B and B->A); keep parent before child alphabetically."""
+    seen_pairs: set = set()
+    result = []
+    for rel in relationships:
+        pair = (rel["parent_table"], rel["child_table"], rel["parent_key"], rel["child_key"])
+        reverse_pair = (rel["child_table"], rel["parent_table"], rel["child_key"], rel["parent_key"])
+        if reverse_pair in seen_pairs:
+            continue  # Already have reverse; skip this one
+        if pair in seen_pairs:
+            continue  # Duplicate
+        # For circular pairs, keep parent < child (items->matched_items not matched_items->items)
+        if any(
+            r["parent_table"] == rel["child_table"]
+            and r["child_table"] == rel["parent_table"]
+            and r["parent_key"] == rel["child_key"]
+            and r["child_key"] == rel["parent_key"]
+            for r in relationships
+        ):
+            if rel["parent_table"] >= rel["child_table"]:
+                continue  # Skip; we'll keep the other direction
+        seen_pairs.add(pair)
+        result.append(rel)
+    return result
 
 
 def profile_database(

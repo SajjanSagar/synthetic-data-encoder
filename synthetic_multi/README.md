@@ -36,6 +36,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 export SYNTHETIC_DATA_SALT="your-secret-salt"
 
+# SDV requires network modules; use SAFE_MODE=false for local runs
+export SAFE_MODE=false
+
 python -m src.cli ingest
 python -m src.cli inspect
 python -m src.cli setup
@@ -45,10 +48,11 @@ python -m src.cli validate
 python -m src.cli validate --summary
 ```
 
-Or run the full pipeline:
+Or run the full pipeline (with sample data):
 
 ```bash
-python -m src.cli all
+python -m src.cli generate-sample --accounts 1000 --exceptions 1000 --force
+python -m src.cli all --non-interactive   # Auto-accepts inferred schema
 ```
 
 ## Generating Sample Input Data
@@ -72,7 +76,8 @@ Add `--force` to overwrite existing files in `data/real/`.
 
 ## Security & Data Locality
 - The app runs fully local; no outbound network calls are required.
-- `SAFE_MODE=true` blocks common networking libraries at import time.
+- `SAFE_MODE=true` (default) blocks common networking libraries at import time.
+- **Note:** SDV (synthetic data library) depends on modules like `socket`; use `SAFE_MODE=false` for local runs.
 - All staging data is stored locally in `artifacts/staging.db` (SQLite).
 - Avoid running inside iCloud/OneDrive/Dropbox synced folders to prevent accidental leakage.
 

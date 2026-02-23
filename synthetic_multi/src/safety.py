@@ -7,10 +7,12 @@ from typing import Iterable
 
 SAFE_MODE = os.getenv("SAFE_MODE", "true").strip().lower() != "false"
 
+# Block network modules. Note: urllib.parse is allowed (pandas uses it for URL parsing).
+# Only urllib.request does actual network I/O.
 BLOCKED_MODULES = {
     "requests",
     "httpx",
-    "urllib",
+    "urllib.request",
     "urllib3",
     "socket",
     "aiohttp",
@@ -32,7 +34,8 @@ class _BlockedImportFinder(importlib.abc.MetaPathFinder):
 
     def find_spec(self, fullname, path, target=None):  # noqa: D401
         root_name = fullname.split(".", 1)[0]
-        if root_name in self.blocked:
+        # Block if full module or root package is in blocked list
+        if fullname in self.blocked or root_name in self.blocked:
             raise RuntimeError(
                 f"SAFE_MODE is enabled. Import of '{fullname}' is blocked."
             )

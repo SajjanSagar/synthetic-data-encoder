@@ -23,9 +23,28 @@ def _build_sdv_metadata(metadata_dict: Dict[str, object], logger):
     except Exception as exc:  # pragma: no cover - fallback
         raise ImportError("SDV is required for training.") from exc
 
+    # SDV requires child FK columns to be non-PK. Collect child keys.
+    child_fk_columns = set()
+    for rel in metadata_dict.get("relationships", []):
+        child_fk_columns.add((rel["child_table"], rel["child_key"]))
+
     sdv_metadata = {"tables": {}, "relationships": []}
     for table_name, table_info in metadata_dict["tables"].items():
-        pk_list = table_info.get("primary_key", [])
+        pk_list = list(table_info.get("primary_key", []))
+        # If child's FK is its sole PK, use composite so FK is non-PK for SDV
+        if len(pk_list) == 1 and (table_name, pk_list[0]) in child_fk_columns:
+            extra_cols = [
+                c for c in table_info["columns"]
+                if c != pk_list[0]
+            ]
+            if extra_cols:
+                pk_list = [extra_cols[0], pk_list[0]]
+                logger.info(
+                    "Using composite PK %s for %s (SDV requires child FK to be non-PK)",
+                    pk_list,
+                    table_name,
+                )
+
         table_entry = {"columns": table_info["columns"]}
         if len(pk_list) == 1:
             table_entry["primary_key"] = pk_list[0]

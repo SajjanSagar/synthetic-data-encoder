@@ -6,7 +6,9 @@ import yaml
 from .logging_utils import get_logger
 
 
-def _prompt(message: str, default: str = "") -> str:
+def _prompt(message: str, default: str = "", non_interactive: bool = False) -> str:
+    if non_interactive:
+        return default
     if default:
         prompt = f"{message} [{default}]: "
     else:
@@ -19,7 +21,9 @@ def _parse_columns(value: str) -> List[str]:
     return [col.strip() for col in value.split(",") if col.strip()]
 
 
-def run_relationship_wizard(profile: Dict[str, object]) -> Dict[str, object]:
+def run_relationship_wizard(
+    profile: Dict[str, object], non_interactive: bool = False
+) -> Dict[str, object]:
     logger = get_logger(__name__)
     confirmed = {"tables": {}, "relationships": []}
 
@@ -32,6 +36,7 @@ def run_relationship_wizard(profile: Dict[str, object]) -> Dict[str, object]:
         response = _prompt(
             f"Primary key for table '{table_name}' (comma-separated for composite)",
             default_pk,
+            non_interactive,
         )
         confirmed["tables"][table_name] = {
             "primary_key": _parse_columns(response) if response else []
@@ -49,6 +54,7 @@ def run_relationship_wizard(profile: Dict[str, object]) -> Dict[str, object]:
             "Enter relationships as child_table.child_key=parent_table.parent_key "
             "(comma-separated), or press Enter to accept all",
             "",
+            non_interactive,
         )
         if response:
             entries = [entry.strip() for entry in response.split(",") if entry.strip()]

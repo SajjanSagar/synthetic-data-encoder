@@ -49,13 +49,13 @@ def inspect(config: dict, base_dir: Path) -> dict:
     return profile
 
 
-def setup(config: dict, base_dir: Path) -> None:
+def setup(config: dict, base_dir: Path, non_interactive: bool = False) -> None:
     from .metadata_builder import build_metadata
     from .relationship_wizard import run_relationship_wizard, save_confirmed_schema
 
     staging_db = _resolve_path(base_dir, config["project"]["staging_db"])
     profile = inspect(config, base_dir)
-    confirmed = run_relationship_wizard(profile)
+    confirmed = run_relationship_wizard(profile, non_interactive)
 
     metadata_path = _resolve_path(base_dir, config["project"]["metadata_json"])
     relationships_path = _resolve_path(base_dir, config["project"]["relationships_yaml"])
@@ -139,7 +139,12 @@ def main() -> None:
 
     subparsers.add_parser("ingest", help="Load CSVs into SQLite staging DB")
     subparsers.add_parser("inspect", help="Profile tables and infer relationships")
-    subparsers.add_parser("setup", help="Confirm schema and relationships")
+    setup_parser = subparsers.add_parser("setup", help="Confirm schema and relationships")
+    setup_parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Auto-accept inferred schema (for CI/testing)",
+    )
     subparsers.add_parser("train", help="Train synthetic data generator")
 
     generate_parser = subparsers.add_parser("generate", help="Generate synthetic data")
@@ -151,7 +156,12 @@ def main() -> None:
     validate_parser.add_argument(
         "--summary", action="store_true", help="Print validation summary"
     )
-    subparsers.add_parser("all", help="Run full pipeline")
+    all_parser = subparsers.add_parser("all", help="Run full pipeline")
+    all_parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Auto-accept inferred schema in setup (for CI/testing)",
+    )
     sample_parser = subparsers.add_parser(
         "generate-sample", help="Generate sample CSV input data"
     )
@@ -171,7 +181,7 @@ def main() -> None:
         inspect(config, base_dir)
     elif args.command == "setup":
         logger.info("Running setup")
-        setup(config, base_dir)
+        setup(config, base_dir, non_interactive=getattr(args, "non_interactive", False))
     elif args.command == "train":
         logger.info("Running train")
         train(config, base_dir)
@@ -211,9 +221,10 @@ def main() -> None:
         )
     elif args.command == "all":
         logger.info("Running full pipeline")
+        non_interactive = getattr(args, "non_interactive", False)
         ingest(config, base_dir)
         inspect(config, base_dir)
-        setup(config, base_dir)
+        setup(config, base_dir, non_interactive)
         train(config, base_dir)
         generate(config, base_dir, None)
         validate(config, base_dir)
