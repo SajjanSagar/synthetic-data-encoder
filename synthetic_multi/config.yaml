@@ -1,0 +1,27 @@
+project:
+  data_real_dir: "data/real"
+  data_synthetic_dir: "data/synthetic"
+  artifacts_dir: "artifacts"
+  reports_dir: "reports"
+  staging_db: "artifacts/staging.db"
+  synthetic_db: "artifacts/synthetic.db"
+  metadata_json: "artifacts/metadata.json"
+  relationships_yaml: "artifacts/relationships.yaml"
+  privacy_rules_yaml: "artifacts/privacy_rules.yaml"
+  model_dir: "artifacts/models"
+
+ingest:
+  empty_string_as_null: true
+  sample_rows_for_profiling: 5000
+
+profiling:
+  pk_min_uniqueness: 0.999
+  fk_match_threshold: 0.9
+  max_composite_key_size: 2
+
+generation:
+  scale: 1.0
+  random_seed: 42
+
+privacy:
+  salt_env_var: "SYNTHETIC_DATA_SALT"
